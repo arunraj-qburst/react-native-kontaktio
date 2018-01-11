@@ -14,6 +14,9 @@ import com.kontakt.sdk.android.common.KontaktSDK;
 class BeaconProximityManager {
     private final static String IBEACON = "IBEACON";
     private final static String EDDYSTONE = "EDDYSTONE";
+    private final static String BEACON_PRO = "BEACON_PRO";
+
+
 
     private final ReactApplicationContext reactAppContext;
     private String kontaktApiKey;
@@ -47,20 +50,20 @@ class BeaconProximityManager {
         if (beaconTypes == null || beaconTypes.size() == 0) {
             proximityManager.setIBeaconListener(beaconListeners.createIBeaconListener());
         } else if (beaconTypes.size() == 1) {
-            if (beaconTypes.getString(0).equals(IBEACON)) {
-                proximityManager.setIBeaconListener(beaconListeners.createIBeaconListener());
+            if (beaconTypes.getString(0).equals(BEACON_PRO)) {
+                proximityManager.setSecureProfileListener(beaconListeners.createSecureProfileListener()); // for Beacon-Pro only
             } else if (beaconTypes.getString(0).equals(EDDYSTONE)) {
                 proximityManager.setEddystoneListener(beaconListeners.createEddystoneListener());
             } else {
-                throw new Exception("The value of the beaconType(s) has to be either IBEACON or EDDYSTONE");
+                throw new Exception("The value of the beaconType(s) has to be either BEACON_PRO or EDDYSTONE");
             }
         } else if (beaconTypes.size() == 2) {
-            if ((beaconTypes.getString(0).equals(IBEACON) && beaconTypes.getString(1).equals(EDDYSTONE))
-                    || (beaconTypes.getString(0).equals(EDDYSTONE) && beaconTypes.getString(1).equals(IBEACON))) {
-                proximityManager.setIBeaconListener(beaconListeners.createIBeaconListener());
+            if ((beaconTypes.getString(0).equals(BEACON_PRO) && beaconTypes.getString(1).equals(EDDYSTONE))
+                    || (beaconTypes.getString(0).equals(EDDYSTONE) && beaconTypes.getString(1).equals(BEACON_PRO))) {
+                proximityManager.setSecureProfileListener(beaconListeners.createSecureProfileListener()); // for Beacon-Pro only
                 proximityManager.setEddystoneListener(beaconListeners.createEddystoneListener());
             } else {
-                throw new Exception("The beaconTypes values have to be IBEACON and EDDYSTONE");
+                throw new Exception("The beaconTypes values have to be BEACON_PRO and EDDYSTONE");
             }
         } else {
             throw new Exception("beaconTypes array has to have less than 2 arguments or be empty");

@@ -1,6 +1,7 @@
 package com.artirigo.kontaktio;
 
 import android.util.Log;
+import android.widget.Toast;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactApplicationContext;
@@ -13,12 +14,15 @@ import com.kontakt.sdk.android.ble.exception.ScanError;
 import com.kontakt.sdk.android.ble.manager.listeners.EddystoneListener;
 import com.kontakt.sdk.android.ble.manager.listeners.IBeaconListener;
 import com.kontakt.sdk.android.ble.manager.listeners.ScanStatusListener;
+import com.kontakt.sdk.android.ble.manager.listeners.SecureProfileListener;
 import com.kontakt.sdk.android.ble.manager.listeners.SpaceListener;
+import com.kontakt.sdk.android.ble.spec.KontaktTelemetry;
 import com.kontakt.sdk.android.ble.spec.Telemetry;
 import com.kontakt.sdk.android.common.profile.IBeaconDevice;
 import com.kontakt.sdk.android.common.profile.IBeaconRegion;
 import com.kontakt.sdk.android.common.profile.IEddystoneDevice;
 import com.kontakt.sdk.android.common.profile.IEddystoneNamespace;
+import com.kontakt.sdk.android.common.profile.ISecureProfile;
 import com.kontakt.sdk.android.common.profile.RemoteBluetoothDevice;
 
 import java.util.List;
@@ -36,6 +40,49 @@ final class BeaconListeners {
     BeaconListeners(ReactApplicationContext reactAppContext) {
         this.reactAppContext = reactAppContext;
         this.outputMap = Arguments.createMap();
+    }
+
+
+    SecureProfileListener createSecureProfileListener() {
+
+        return new SecureProfileListener() {
+            @Override
+            public void onProfileDiscovered(ISecureProfile iSecureProfile) {
+                Log.i( "onProfileDiscovered", "onProfileDiscovered: " + iSecureProfile.toString());
+                //Toast.makeText( reactAppContext, "onProfileDiscovered "+iSecureProfile.toString(), Toast.LENGTH_LONG).show();
+                outputMap = Arguments.createMap();
+                outputMap.putMap("beaconPro", createMapWithBeaconPro(iSecureProfile));
+                sendEvent(reactAppContext, "beaconProDidAppear", outputMap);
+            }
+
+            @Override
+            public void onProfilesUpdated(List<ISecureProfile> list) {
+                outputMap = Arguments.createMap();
+                outputMap.putArray("beaconPros", createArrayWithBeaconPros(list));
+                sendEvent(reactAppContext, "beaconProsDidUpdate", outputMap);
+                        /*
+                for(ISecureProfile profile : list){
+                    if(profile.getTelemetry() != null){
+                        Log.i("onProfilesUpdated","onProfilesUpdated: Light: " +
+                                profile.getTelemetry().getLightSensor()+
+                                ", MAC: " +
+                                profile.getMacAddress()+
+                                ", Name: " +
+                                profile.getName()+
+                                ", UniqueID: " +
+                                profile.getUniqueId());
+                    }
+
+                }*/
+            }
+
+            @Override
+            public void onProfileLost(ISecureProfile iSecureProfile) {
+                Log.i( "onProfileLost", "onProfileLost: " + iSecureProfile.toString());
+            }
+        };
+
+
     }
 
     IBeaconListener createIBeaconListener() {
@@ -236,6 +283,56 @@ final class BeaconListeners {
 
     /**
      * Creates a map with parameters to send to JS
+     * @param beaconPro ISecureProfile
+     * @return
+     */
+    private WritableMap createMapWithBeaconPro(ISecureProfile beaconPro) {
+        WritableMap e = new WritableNativeMap();
+        e.putString("name", beaconPro.getName());
+        e.putString("address", beaconPro.getMacAddress());
+        e.putDouble("rssi", beaconPro.getRssi());
+        e.putString("proximity", String.valueOf(beaconPro.getTxPower()));// TODO- correct this value later. Arun
+
+        // BeaconPro
+        e.putString("namespace", beaconPro.getNamespace());
+        e.putString("instanceId", beaconPro.getInstanceId());
+        e.putString("url", null);
+        e.putString("eid", null);
+
+        // Telemetry
+        KontaktTelemetry telemetry = beaconPro.getTelemetry();
+        if (telemetry != null) {
+            WritableMap t = new WritableNativeMap();
+            e.putString("encryptedTelemetry",  telemetry.toString());
+            t.putDouble("batteryVoltage", telemetry.getBatteryLevel());
+            t.putDouble("temperature", telemetry.getTemperature());
+            t.putInt("lastThreshold", telemetry.getLastThreshold());
+            t.putInt("bleScans", telemetry.getBleScans());
+            t.putInt("sensitivity", telemetry.getSensitivity());
+            t.putInt("accelerationX", telemetry.getAcceleration().getX() );
+            t.putInt("accelerationY", telemetry.getAcceleration().getY() );
+            t.putInt("accelerationZ", telemetry.getAcceleration().getZ() );
+            t.putInt("uptime", telemetry.getUptime());
+            t.putInt("light", telemetry.getLightSensor());
+            e.putMap("telemetry", t);
+        } else {
+            e.putString("telemetry", null);
+        }
+
+        // Kontakt.io specific
+        e.putDouble("accuracy", 0);
+        e.putInt("batteryPower", (telemetry!=null)?telemetry.getBatteryLevel():0);
+        e.putInt("txPower", beaconPro.getTxPower());
+        e.putString("firmwareVersion", beaconPro.getFirmwareRevision());
+        e.putString("uniqueId", beaconPro.getUniqueId());  // unique 4-digit code on backside of beacon
+        e.putBoolean("isShuffled", beaconPro.isShuffled());
+        return e;
+    }
+
+
+    ///////////
+    /**
+     * Creates a map with parameters to send to JS
      * @param eddystone IEddystoneDevice
      * @return
      */
@@ -295,7 +392,7 @@ final class BeaconListeners {
 
     /**
      * Creates a map with parameters to send to JS
-     * @param region IEddystoneNamespace
+     * @param namespace IEddystoneNamespace
      * @return
      */
     private WritableMap createMapWithNamespace(IEddystoneNamespace namespace) {
@@ -334,5 +431,19 @@ final class BeaconListeners {
         }
 
         return eddystoneArray;
+    }
+
+    /**
+     * Creates an array with all beaconPros in beaconProDeviceList
+     * @param beaconProDeviceList List of ISecureProfile (Beacon-Pro)
+     * @return
+     */
+    private WritableArray createArrayWithBeaconPros(List<ISecureProfile> beaconProDeviceList) {
+        WritableArray beaconProArray = new WritableNativeArray();
+        for (ISecureProfile beaconPro : beaconProDeviceList) {
+            beaconProArray.pushMap(createMapWithBeaconPro(beaconPro));
+        }
+
+        return beaconProArray;
     }
 }

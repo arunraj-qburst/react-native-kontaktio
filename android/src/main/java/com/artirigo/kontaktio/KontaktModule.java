@@ -159,7 +159,7 @@ public class KontaktModule extends ReactContextBaseJavaModule {
      * Restart has to be triggered so that region changes take effect when
      * changing regions after scan started.
      *
-     * @param region Object with IBeacon region data
+     * @param regionParams Object with IBeacon region data
      * @param promise
      */
     @ReactMethod

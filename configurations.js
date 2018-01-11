@@ -1,5 +1,6 @@
 export const IBEACON = "IBEACON";
-export const EDDYSTONE = "EDDYSTONE";
+export const EDDYSTONE = "EDDYSTONE"; 
+export const BEACON_PRO = "BEACON_PRO";
 
 export const scanMode = {
   LOW_POWER: 0,

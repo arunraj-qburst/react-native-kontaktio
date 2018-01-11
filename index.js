@@ -7,6 +7,7 @@ import {
 import {
   IBEACON,
   EDDYSTONE,
+  BEACON_PRO,
   scanMode,
   scanPeriod,
   activityCheckConfiguration,
@@ -79,6 +80,7 @@ if (Platform.OS === "android") {
     // Constants
     IBEACON,
     EDDYSTONE,
+    BEACON_PRO,
     DEFAULT_KONTAKT_BEACON_PROXIMITY_UUID,
     DEFAULT_KONTAKT_NAMESPACE_ID,
     ANY_MAJOR,
